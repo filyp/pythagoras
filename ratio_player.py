@@ -213,7 +213,7 @@ if __name__ == '__main__':
     init()
     player = PolyphonicPlayer()
     player.start()
-    print(figlet_format('pythagoras', font='graffiti'))
+    print(figlet_format('Pythagoras', font='graffiti'))
     control(player)
     player.kill()
     player.join()

@@ -1,2 +1,7 @@
-# pythagoras
-Explore strange new harmonies. Boldly go where no one has gone before.
+# Pythagoras
+harmony = relations between numbers
+
+## Installation
+```sh
+pip install -r requirements.txt
+```
