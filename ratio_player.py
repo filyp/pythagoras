@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import csv
-import curses
 import datetime
 import math
 import os
