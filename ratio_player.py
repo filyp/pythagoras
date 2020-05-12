@@ -17,6 +17,23 @@ from readchar import readchar
 dir_path = os.path.dirname(os.path.realpath(__file__))
 FILENAME = os.path.join(dir_path, 'ratios.csv')
 BIT_RATE = 44000
+BASE_FREQ = 10
+
+template = '\n{1:>6}{2:>6}{3:>6}{4:>6}{5:>6}{6:>6}{7:>6}{8:>6}{9:>6}{0:>6}    '
+help_msg = f'''
+choose slot by pressing a number key
+slots: {template.format(*'0123456789')}
+
+after that type a number from 01 to 99
+for example, typing 45, means {45 * BASE_FREQ} Hz will be played from this slot,
+typing 08, means {8 * BASE_FREQ} Hz will be played
+type 00 to delete sound in this slot
+
+if you like some chord, press r to record it (it will be placed in ratios.csv file)
+pressing e will save chord progression from the previous to this chord
+
+press q to quit
+'''
 
 # credit: stackoverflow.com/questions/10702942/note-synthesis-harmonics-violin-piano-guitar-bass-frequencies-midi
 violin_amps = [0.0, 1.0, 0.286699025, 0.150079537, 0.042909002,
@@ -165,18 +182,20 @@ def decompose(n, length=6):
 
 
 def control(player, verbose=True):
-    template = '\n{1:>6}{2:>6}{3:>6}{4:>6}{5:>6}   {6:>6}{7:>6}{8:>6}{9:>6}{0:>6}    '
     with open(FILENAME, 'a') as csvfile:
         writer = csv.writer(csvfile)
         while True:
             command = readchar()
-            if command == 'r':
+            if command == 'h':
+                print(help_msg)
+                continue
+            elif command == 'r':
                 writer.writerow([time(), 'node'] + player.ratios)
-                print('node saved', end='  ', flush=True)
+                print('chord saved', end='  ', flush=True)
                 continue
             elif command == 'e':
                 writer.writerow([time(), 'edge'] + player.ratios)
-                print('edge saved', end='  ', flush=True)
+                print('chords saved', end='  ', flush=True)
                 continue
 
             try:
@@ -196,7 +215,8 @@ def control(player, verbose=True):
 
             new_ratio = digit1 * 10 + digit2
             player.ratios[index] = new_ratio
-            print(template.format(*player.ratios), end='', flush=True)
+            nums_to_display = [n if n != 0 else '' for n in player.ratios]
+            print(template.format(*nums_to_display), end='', flush=True)
             if verbose:
                 factors = (decompose(num) for num in player.ratios)
                 print(template.format(*factors), end='', flush=True)
@@ -210,9 +230,10 @@ if __name__ == '__main__':
     # else:
     #     base_freq = 5
     init()
-    player = PolyphonicPlayer()
+    player = PolyphonicPlayer(base_freq=BASE_FREQ)
     player.start()
     print(figlet_format('Pythagoras', font='graffiti'))
+    print('press h for help')
     control(player)
     player.kill()
     player.join()
