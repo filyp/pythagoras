@@ -1,3 +1,8 @@
 ratios.csv
 venv/
 .vscode/
+__pycache__/
+build/
+dist/
+pythagoras.spec
+pkg_resources.spec
