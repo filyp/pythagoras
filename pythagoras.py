@@ -9,7 +9,7 @@ import threading
 from time import sleep, time
 
 import numpy as np
-# import sounddevice as sd
+import sounddevice as sd
 import pyaudio
 from colorama import Fore, Style, init
 from pyfiglet import figlet_format
@@ -55,13 +55,19 @@ class PolyphonicPlayer(threading.Thread):
         threading.Thread.__init__(self)
 
          # initialize pyaudio
-        self.p = pyaudio.PyAudio()
+        # self.p = pyaudio.PyAudio()
 
         # for paFloat32 sample values must be in range [-1.0, 1.0]
-        self.stream = self.p.open(format=pyaudio.paFloat32,
-                                channels=1,
-                                rate=BIT_RATE,
-                                output=True)
+        # self.stream = self.p.open(format=pyaudio.paFloat32,
+        #                         channels=1,
+        #                         rate=BIT_RATE,
+        #                         output=True)
+        self.stream = sd.RawOutputStream(
+            channels=1,
+            # dtype='float32',
+            samplerate=BIT_RATE)
+        self.stream.start()
+
         self.alive = True
         self.base_freq = base_freq
         self.max_voices = max_voices
@@ -71,6 +77,7 @@ class PolyphonicPlayer(threading.Thread):
 
     def run(self):
         while self.alive:
+            # print(time())
             if not self.ratios:
                 # no frequencies given so be silent
                 sleep(self.segment_duration)
@@ -92,9 +99,10 @@ class PolyphonicPlayer(threading.Thread):
                               .astype(np.float32)
                               .tobytes())
 
-        self.stream.stop_stream()
+        # self.stream.stop_stream()
+        self.stream.stop()
         self.stream.close()
-        self.p.terminate()
+        # self.p.terminate()
 
     def get_wave(self, primary_frequency, phase):
         acc = 0
@@ -226,6 +234,7 @@ if __name__ == '__main__':
     #     base_freq = float(sys.argv[1])
     # else:
     #     base_freq = 5
+    # sd.default.samplerate = BASE_FREQ
     init()
     player = PolyphonicPlayer(base_freq=BASE_FREQ)
     player.start()
