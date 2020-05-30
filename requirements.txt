@@ -1,5 +1,7 @@
+cffi==1.14.0
 colorama==0.4.3
 numpy==1.18.4
-PyAudio==0.2.11
+pycparser==2.20
 pyfiglet==0.8.post1
 readchar==2.0.1
+sounddevice==0.3.15

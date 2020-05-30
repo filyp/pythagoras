@@ -10,7 +10,6 @@ from time import sleep, time
 
 import numpy as np
 import sounddevice as sd
-import pyaudio
 from colorama import Fore, Style, init
 from pyfiglet import figlet_format
 from readchar import readchar
@@ -54,17 +53,8 @@ class PolyphonicPlayer(threading.Thread):
     def __init__(self, base_freq=10, max_voices=10):
         threading.Thread.__init__(self)
 
-         # initialize pyaudio
-        # self.p = pyaudio.PyAudio()
-
-        # for paFloat32 sample values must be in range [-1.0, 1.0]
-        # self.stream = self.p.open(format=pyaudio.paFloat32,
-        #                         channels=1,
-        #                         rate=BIT_RATE,
-        #                         output=True)
         self.stream = sd.RawOutputStream(
             channels=1,
-            # dtype='float32',
             samplerate=BIT_RATE)
         self.stream.start()
 
@@ -99,10 +89,8 @@ class PolyphonicPlayer(threading.Thread):
                               .astype(np.float32)
                               .tobytes())
 
-        # self.stream.stop_stream()
         self.stream.stop()
         self.stream.close()
-        # self.p.terminate()
 
     def get_wave(self, primary_frequency, phase):
         acc = 0
