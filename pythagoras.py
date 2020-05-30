@@ -9,12 +9,14 @@ import threading
 from time import sleep, time
 
 import numpy as np
+# import sounddevice as sd
 import pyaudio
 from colorama import Fore, Style, init
 from pyfiglet import figlet_format
 from readchar import readchar
 
-dir_path = os.path.dirname(os.path.realpath(__file__))
+
+dir_path = os.path.dirname(sys.argv[0])
 FILENAME = os.path.join(dir_path, 'ratios.csv')
 BIT_RATE = 44000
 BASE_FREQ = 10
@@ -36,25 +38,13 @@ press q to quit
 '''
 
 # credit: stackoverflow.com/questions/10702942/note-synthesis-harmonics-violin-piano-guitar-bass-frequencies-midi
-violin_amps = [0.0, 1.0, 0.286699025, 0.150079537, 0.042909002,
-               0.203797365, 0.229228698, 0.156931925,
-               0.115470898, 0.0, 0.097401803, 0.087653465,
-               0.052331036, 0.052922462, 0.038850593,]
-               # 0.053554676, 0.053697434, 0.022270261,
-               # 0.013072562, 0.008585879, 0.005771505,
-               # 0.004343925, 0.002141371, 0.005343231,
-               # 0.000530244, 0.004711017, 0.009014153]
-
-piano_amps = [0.0, 1.0, 0.399064778, 0.229404484, 0.151836061,
-              0.196754229, 0.093742264, 0.060871957,
-              0.138605419, 0.010535002, 0.071021868,]
-              # 0.029954614, 0.051299684, 0.055948288,
-              # 0.066208224, 0.010067391, 0.00753679,
-              # 0.008196947, 0.012955577, 0.007316738,]
-              # 0.006216476, 0.005116215, 0.006243983,
-              # 0.002860679, 0.002558108, 0.0, 0.001650392]
-
 sine_amps = [0.0, 1.0]
+violin_amps = [0.0, 1.0, 0.286699025, 0.150079537, 0.042909002,]
+            #    0.203797365, 0.229228698, 0.156931925,
+            #    0.115470898, 0.0, 0.097401803, 0.087653465,]
+piano_amps = [0.0, 1.0, 0.399064778, 0.229404484, 0.151836061,]
+              # 0.196754229, 0.093742264, 0.060871957,]
+              # 0.138605419, 0.010535002, 0.071021868,]
 
 
 class PolyphonicPlayer(threading.Thread):
@@ -117,7 +107,14 @@ class PolyphonicPlayer(threading.Thread):
             acc += wave * amplitude
         # adjust volume
         maximum_possible_volume = np.sum(self.amps)
-        return acc / maximum_possible_volume
+        human_amp = self.human_corrected_amplitude(primary_frequency)
+        return acc * human_amp / maximum_possible_volume 
+    
+    def human_corrected_amplitude(self, frequency):
+        low_limit = 30
+        slope = -1.2
+        rescaled = max(frequency / low_limit, 1)
+        return rescaled ** slope
 
     def kill(self):
         self.alive = False
