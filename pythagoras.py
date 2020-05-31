@@ -9,11 +9,10 @@ import threading
 from time import sleep, time
 
 import numpy as np
-import sounddevice as sd
+import sounddevice
 from colorama import Fore, Style, init
 from pyfiglet import figlet_format
 from readchar import readchar
-
 
 dir_path = os.path.dirname(sys.argv[0])
 FILENAME = os.path.join(dir_path, 'ratios.csv')
@@ -48,12 +47,11 @@ piano_amps = [0.0, 1.0, 0.399064778, 0.229404484, 0.151836061,]
 
 class PolyphonicPlayer(threading.Thread):
     segment_duration = 0.01     # in seconds
-    amps = sine_amps          # tone (amplitude of the overtones)
 
-    def __init__(self, base_freq=10, max_voices=10):
+    def __init__(self, base_freq=10, max_voices=10, amps=sine_amps):
         threading.Thread.__init__(self)
 
-        self.stream = sd.RawOutputStream(
+        self.stream = sounddevice.RawOutputStream(
             channels=1,
             samplerate=BIT_RATE)
         self.stream.start()
@@ -64,10 +62,10 @@ class PolyphonicPlayer(threading.Thread):
         self.ratios = [0] * max_voices
         self.phases = [0] * max_voices
         self.last_time = time()
+        self.amps = amps / np.sum(amps)
 
     def run(self):
         while self.alive:
-            # print(time())
             if not self.ratios:
                 # no frequencies given so be silent
                 sleep(self.segment_duration)
@@ -102,13 +100,12 @@ class PolyphonicPlayer(threading.Thread):
                           + phase * index)
             acc += wave * amplitude
         # adjust volume
-        maximum_possible_volume = np.sum(self.amps)
         human_amp = self.human_corrected_amplitude(primary_frequency)
-        return acc * human_amp / maximum_possible_volume 
+        return acc * human_amp
     
     def human_corrected_amplitude(self, frequency):
-        low_limit = 30
-        slope = -1.2
+        low_limit = 40
+        slope = -1.0
         rescaled = max(frequency / low_limit, 1)
         return rescaled ** slope
 
@@ -222,7 +219,6 @@ if __name__ == '__main__':
     #     base_freq = float(sys.argv[1])
     # else:
     #     base_freq = 5
-    # sd.default.samplerate = BASE_FREQ
     init()
     player = PolyphonicPlayer(base_freq=BASE_FREQ)
     player.start()
