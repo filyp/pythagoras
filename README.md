@@ -2,6 +2,9 @@
 harmony = relations between numbers
 
 ## Installation
+[linux-standalone](https://drive.google.com/uc?export=download&id=1Y2efsxE8QwaZ1zdd3UjLRBcphFtaeD7W)
+
+Alternatively, clone and:
 ```sh
 pip install -r requirements.txt
 ```
