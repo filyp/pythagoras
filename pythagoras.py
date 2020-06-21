@@ -30,7 +30,10 @@ typing 08, means {8 * BASE_FREQ} Hz will be played
 type 00 to delete sound in this slot
 
 if you like some chord, press r to record it (it will be placed in ratios.csv file)
-pressing e will save chord progression from the previous to this chord
+pressing e will save the chord progression from the previous to this chord
+
+for some ideas of things to try, read:
+https://github.com/fsondej/pythagoras/blob/master/check_it_out.md
 
 press q to quit
 '''
