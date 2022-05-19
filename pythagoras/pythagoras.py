@@ -17,6 +17,8 @@ press 0 to reset notes
 
 to save the chord, press SPACE and then some key
 to load a chord just pressed the key you used for saving
+
+scroll on a node to change it's volume
 """
 
 
