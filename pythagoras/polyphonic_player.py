@@ -94,3 +94,6 @@ class PolyphonicPlayer(threading.Thread):
             if note[0] == ratio:
                 self.notes.remove(note)
                 break
+    
+    def get_chord(self):
+        return [[ratio, volume] for ratio, volume, phase in self.notes]

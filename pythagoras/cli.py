@@ -9,7 +9,7 @@ from colorama import Fore, Style, init
 from pyfiglet import figlet_format
 from readchar import readchar
 
-from pythagoras.polyphonic_player import PolyphonicPlayer
+from polyphonic_player import PolyphonicPlayer
 
 dir_path = os.path.dirname(sys.argv[0])
 FILENAME = os.path.join(dir_path, 'ratios.csv')

@@ -15,6 +15,7 @@ resolution = (2560, 1440)
 n_limit = 325
 displacement = resolution[0] * 0.1
 circle_size = resolution[0] * 0.009
+line_width = int(resolution[0] * 0.002)
 text_size = circle_size * 0.9
 margin = 0.1  # of height
 
@@ -29,15 +30,21 @@ draw_lines_for_ratios = [   # ratio, inactive_color, active_color
 ]
 avoid_numbers = [125, 250, 375, 243]
 
-# placement_matrix = np.array([
-#     [1, 0.500, 0.500],
-#     [0, -0.866, -0.289],
-# ])
-# placement_matrix = np.array([
-#     [1, 1.500, 2.000],
-#     [0, -0.866, -0.577],
-# ])
-placement_matrix = np.array([
-    [1, 1.500, 2.030],
-    [0, -0.866, -0.300],
-])
+placement_matrices = dict(
+    clear=np.array([
+        [1, 1.500, 2.030],
+        [0, -0.866, -0.300],
+    ]),
+    logarithmic=np.array([
+        [np.log2(2), np.log2(3), np.log2(5)],
+        [0, -0.866, -0.200],
+    ]),
+    symmetric=np.array([
+        [1, 1.500, 2.000],
+        [0, -0.866, -0.577],
+    ]),
+    prime_view=np.array([
+        [1, 0.500, 0.500],
+        [0, -0.866, -0.289],
+    ]),
+)
