@@ -29,38 +29,29 @@ class PolyphonicPlayer(threading.Thread):
 
         self.alive = True
         self.base_freq = base_freq
-        self.ratios = []
-        self.phases = []
-        self.volumes = []
         self.last_time = time()
         self.amps = amps / np.sum(amps)
         self.max_voices = max_voices
-        self.notes = set()
+        self.notes = []
 
     def run(self):
         while self.alive:
-            if len(self.ratios) == 0:
+            if len(self.notes) == 0:
                 # no frequencies given so be silent
                 sleep(self.segment_duration)
                 continue
-
-            while len(self.phases) < len(self.ratios):
-                # new ratios were added
-                self.phases.append(0)
-            while len(self.volumes) < len(self.ratios):
-                # new ratios were added
-                self.volumes.append(1)
-            if  self.max_voices < len(self.ratios):
-                self.max_voices = len(self.ratios)
+            if  self.max_voices < len(self.notes):
+                self.max_voices = len(self.notes)
 
             # construct a sound
             new_time = time()
             final_sound = 0
-            for i, ratio, amplitude in zip(range(len(self.ratios)), self.ratios, self.volumes):
+            for i, note in enumerate(self.notes):
+                ratio, amplitude, phase = note
                 frequency = ratio * self.base_freq
-                final_sound += self.get_wave(frequency, self.phases[i]) * amplitude
-                self.phases[i] += self.segment_duration * frequency * 2*np.pi
-                self.phases[i] %= 2*np.pi
+                final_sound += self.get_wave(frequency, phase) * amplitude
+                # update phase
+                note[2] = (phase + self.segment_duration * frequency * 2*np.pi) % (2*np.pi)
 
             final_sound /= self.max_voices    # adjust volume
 
@@ -94,3 +85,12 @@ class PolyphonicPlayer(threading.Thread):
 
     def kill(self):
         self.alive = False
+    
+    def add_note(self, ratio, volume=1, phase=0):
+        self.notes.append([ratio, volume, phase])
+    
+    def remove_note(self, ratio):
+        for note in self.notes:
+            if note[0] == ratio:
+                self.notes.remove(note)
+                break

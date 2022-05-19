@@ -96,6 +96,7 @@ def decompose(n, length=6):
 
 
 def control(player, verbose=True):
+    ratios = [0] * 10
     with open(FILENAME, 'a') as csvfile:
         writer = csv.writer(csvfile)
         while True:
@@ -104,11 +105,11 @@ def control(player, verbose=True):
                 print(help_msg)
                 continue
             elif command == 'r':
-                writer.writerow([time(), 'node'] + player.ratios)
+                writer.writerow([time(), 'node'] + ratios)
                 print('chord saved', end='  ', flush=True)
                 continue
             elif command == 'e':
-                writer.writerow([time(), 'edge'] + player.ratios)
+                writer.writerow([time(), 'edge'] + ratios)
                 print('chords saved', end='  ', flush=True)
                 continue
 
@@ -128,14 +129,20 @@ def control(player, verbose=True):
                 return
 
             new_ratio = digit1 * 10 + digit2
-            player.ratios[index] = new_ratio
-            nums_to_display = [n if n != 0 else '' for n in player.ratios]
+            if ratios[index] != 0:
+                # there is an old ratio alraedy, so we need to remove it
+                player.remove_note(ratios[index])
+            player.add_note(new_ratio)
+            ratios[index] = new_ratio
+                
+
+            nums_to_display = [n if n != 0 else '' for n in ratios]
             print(template.format(*nums_to_display), end='', flush=True)
             if verbose:
-                factors = (decompose(num) for num in player.ratios)
+                factors = (decompose(num) for num in ratios)
                 print(template.format(*factors), end='', flush=True)
 
-            writer.writerow([time(), 'auto'] + player.ratios)
+            writer.writerow([time(), 'auto'] + ratios)
 
 
 if __name__ == '__main__':
@@ -146,7 +153,6 @@ if __name__ == '__main__':
     init()
     player = PolyphonicPlayer(base_freq=BASE_FREQ)
     player.start()
-    player.ratios = [0] * 10
     print(figlet_format('Pythagoras', font='graffiti'))
     print('press h for help')
     control(player)

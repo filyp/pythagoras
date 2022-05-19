@@ -7,6 +7,20 @@ from dashboard_helpers import *
 from polyphonic_player import PolyphonicPlayer
 
 
+"""
+HELP
+
+click nodes to toggle
+click with right button to stash this node, and then click on some other with left to change old ones to new
+
+press ESC to quit
+press 0 to reset notes
+
+to save the chord, press SPACE and then some key
+to load a chord just pressed the key you used for saving
+"""
+
+
 pygame.display.init()
 pygame.font.init()
 dis = pygame.display.set_mode(resolution)
@@ -31,6 +45,33 @@ def redraw_circle(dis, circle_size, n):
     text_rect = text.get_rect()
     text_rect.center = G.nodes[n]["position"]
     dis.blit(text, text_rect)
+
+
+def activate_node(n):
+    G.nodes[n]['active'] = True
+    player.add_note(n)
+    # paint edges
+    for neighbor in G[n]:
+        edge = G[n][neighbor]
+        if G.nodes[neighbor]['active']:
+            edge["active"] = True
+            pygame.draw.line(dis, edge["color1"], edge["position1"], edge["position2"], 5)
+            redraw_circle(dis, circle_size, neighbor)
+    redraw_circle(dis, circle_size, n)
+                        
+
+def deactivate_node(n):
+    G.nodes[n]['active'] = False
+    player.remove_note(n)
+    # paint edges
+    for neighbor in G[n]:
+        edge = G[n][neighbor]
+        if G.nodes[neighbor]['active']:
+            # there was an active edge
+            edge["active"] = False
+            pygame.draw.line(dis, edge["color0"], edge["position1"], edge["position2"], 5)
+            redraw_circle(dis, circle_size, neighbor)
+    redraw_circle(dis, circle_size, n)
 
 
 # draw lines
@@ -69,10 +110,13 @@ pygame.display.update()
 
 
 
-clicked_numbers = dict()
+notes_to_change_from = []
+notes_to_change_to = []
 game_over = False
+await_key_to_save_chord = False
+saved_chords = dict()
 while not game_over:
-    pygame.time.wait(10)
+    pygame.time.wait(20)
     for event in pygame.event.get():
         # print(event)
         # check exit
@@ -81,6 +125,32 @@ while not game_over:
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
                 game_over = True
+            # ! 0 resets notes
+            elif event.key == pygame.K_0:
+                for node in G.nodes:
+                    if G.nodes[node]['active']:
+                        deactivate_node(node)
+            # ! space saves chord
+            elif event.key == pygame.K_SPACE:
+                await_key_to_save_chord = True
+            else:
+                if await_key_to_save_chord:
+                    # save chord TODO
+                    saved_chords[event.key] = [note for note in G.nodes if G.nodes[note]['active']]
+                    await_key_to_save_chord = False
+                else:
+                    # load chord
+                    if event.key in saved_chords:
+                        chord = saved_chords[event.key]
+                        # deactivate
+                        for node in G.nodes:
+                            if G.nodes[node]['active']:
+                                deactivate_node(node)
+                        # activate
+                        for note in chord:
+                            activate_node(note)
+                        pygame.display.update()
+
 
         # ! detect clicks
         if event.type == pygame.MOUSEBUTTONDOWN:
@@ -88,42 +158,40 @@ while not game_over:
             for n, position in circle_positions.items():
                 if np.linalg.norm(click_pos - position) < circle_size:
                     # clicked a circle - now check if it was already clicked
-                    if n in clicked_numbers:
-                        # unset it
-                        del clicked_numbers[n]
-                        G.nodes[n]['active'] = False
-                        # ! paint edges
-                        for neighbor in G[n]:
-                            edge = G[n][neighbor]
-                            if G.nodes[neighbor]['active']:
-                                # there was an active edge
-                                edge["active"] = False
-                                pygame.draw.line(dis, edge["color0"], edge["position1"], edge["position2"], 5)
-                                redraw_circle(dis, circle_size, neighbor)
+                    if G.nodes[n]['active'] and event.button == 1:
+                        # ! just deactivate
+                        deactivate_node(n)
+                    elif G.nodes[n]['active'] and event.button == 3:
+                        # ! mark it for change
+                        notes_to_change_from.append(n)
+                    elif not G.nodes[n]['active'] and event.button == 1:
+                        if notes_to_change_from == []:
+                            # ! just activate immediately
+                            activate_node(n)
+                        else:
+                            notes_to_change_to.append(n)
+                            if len(notes_to_change_from) == len(notes_to_change_to):
+                                # ! switch all
+                                for note in notes_to_change_from:
+                                    deactivate_node(note)
+                                    notes_to_change_from = []
+                                for note in notes_to_change_to:
+                                    activate_node(note)
+                                    notes_to_change_to = []
+                    elif not G.nodes[n]['active'] and event.button == 3:
+                        # ! invalid move
+                        pass
 
-                    else:
-                        clicked_numbers[n] = 1
-                        G.nodes[n]['active'] = True
-                        # ! paint edges
-                        for neighbor in G[n]:
-                            edge = G[n][neighbor]
-                            if G.nodes[neighbor]['active']:
-                                edge["active"] = True
-                                pygame.draw.line(dis, edge["color1"], edge["position1"], edge["position2"], 5)
-                                redraw_circle(dis, circle_size, neighbor)
-
-                    redraw_circle(dis, circle_size, n)
                     pygame.display.update()
-                    # ! update the player
-                    player.ratios = list(clicked_numbers.keys())
-                    player.volumes = list(clicked_numbers.values())
+                    # print(player.notes)
+                    # print(notes_to_change_from, notes_to_change_to)
 
 
 player.kill()
 player.join()
 pygame.quit()
 
-# TODO
-# to remove pops, rewrite polyphonic player, to have a set of triples (ratio, volume, phase)
-# no need for clicked_numbers then
-# but how to remove pops when changing volume? some continouty is needed
+print(saved_chords)
+
+
+# TODO change chord smoothly
