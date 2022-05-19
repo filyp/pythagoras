@@ -7,3 +7,4 @@ dist/
 pythagoras.spec
 pkg_resources.spec
 most_used.txt
+.ipynb_checkpoints

@@ -1,23 +1,19 @@
 #!/usr/bin/env python3
 import csv
-import datetime
 import math
 import os
-import pathlib
 import sys
-import threading
-from time import sleep, time
+from time import time
 
-import numpy as np
-import sounddevice
 from colorama import Fore, Style, init
 from pyfiglet import figlet_format
 from readchar import readchar
 
+from pythagoras.polyphonic_player import PolyphonicPlayer
+
 dir_path = os.path.dirname(sys.argv[0])
 FILENAME = os.path.join(dir_path, 'ratios.csv')
-BIT_RATE = 44000
-BASE_FREQ = 10
+BASE_FREQ = int(sys.argv[1]) if len(sys.argv) > 1 else 10
 
 template = '\n{1:>6}{2:>6}{3:>6}{4:>6}{5:>6}{6:>6}{7:>6}{8:>6}{9:>6}{0:>6}    '
 help_msg = f'''
@@ -39,81 +35,6 @@ press q to quit
 '''
 
 # credit: stackoverflow.com/questions/10702942/note-synthesis-harmonics-violin-piano-guitar-bass-frequencies-midi
-sine_amps = [0.0, 1.0]
-violin_amps = [0.0, 1.0, 0.286699025, 0.150079537, 0.042909002,]
-            #    0.203797365, 0.229228698, 0.156931925,
-            #    0.115470898, 0.0, 0.097401803, 0.087653465,]
-piano_amps = [0.0, 1.0, 0.399064778, 0.229404484, 0.151836061,]
-              # 0.196754229, 0.093742264, 0.060871957,]
-              # 0.138605419, 0.010535002, 0.071021868,]
-
-
-class PolyphonicPlayer(threading.Thread):
-    segment_duration = 0.01     # in seconds
-
-    def __init__(self, base_freq=10, max_voices=10, amps=sine_amps):
-        threading.Thread.__init__(self)
-
-        self.stream = sounddevice.RawOutputStream(
-            channels=1,
-            samplerate=BIT_RATE)
-        self.stream.start()
-
-        self.alive = True
-        self.base_freq = base_freq
-        self.max_voices = max_voices
-        self.ratios = [0] * max_voices
-        self.phases = [0] * max_voices
-        self.last_time = time()
-        self.amps = amps / np.sum(amps)
-
-    def run(self):
-        while self.alive:
-            if not self.ratios:
-                # no frequencies given so be silent
-                sleep(self.segment_duration)
-                continue
-
-            # construct a sound
-            new_time = time()
-            final_sound = 0
-            for i, ratio in enumerate(self.ratios):
-                frequency = ratio * self.base_freq
-                final_sound += self.get_wave(frequency, self.phases[i])
-                self.phases[i] += self.segment_duration * frequency * 2*np.pi
-                self.phases[i] %= 2*np.pi
-
-            final_sound /= self.max_voices    # adjust volume
-
-            self.last_time = new_time
-            self.stream.write(final_sound
-                              .astype(np.float32)
-                              .tobytes())
-
-        self.stream.stop()
-        self.stream.close()
-
-    def get_wave(self, primary_frequency, phase):
-        acc = 0
-        for index, amplitude in enumerate(self.amps):
-            frequency = primary_frequency * index
-            wave = np.sin(2 * np.pi *
-                          np.arange(BIT_RATE * self.segment_duration) *
-                          frequency / BIT_RATE
-                          + phase * index)
-            acc += wave * amplitude
-        # adjust volume
-        human_amp = self.human_corrected_amplitude(primary_frequency)
-        return acc * human_amp
-    
-    def human_corrected_amplitude(self, frequency):
-        low_limit = 40
-        slope = -1.0
-        rescaled = max(frequency / low_limit, 1)
-        return rescaled ** slope
-
-    def kill(self):
-        self.alive = False
 
 
 # def set_ratios(self, *ratios):
@@ -225,6 +146,7 @@ if __name__ == '__main__':
     init()
     player = PolyphonicPlayer(base_freq=BASE_FREQ)
     player.start()
+    player.ratios = [0] * 10
     print(figlet_format('Pythagoras', font='graffiti'))
     print('press h for help')
     control(player)
