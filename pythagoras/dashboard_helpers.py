@@ -38,9 +38,8 @@ def load_chords(line_number):
     # load a dict from a string
     saved_chords = eval(loaded_chords)
     print("\nloaded chords:")
-    for keycode, chord in saved_chords.items():
-        keyname = pygame.key.name(keycode)
-        print(f"{keyname}: {chord}")
+    for keyname, chord in saved_chords.items():
+        print(f"{keyname}: {[freq for freq, _, _ in chord]}")
     return saved_chords
 
 
@@ -56,8 +55,6 @@ class Drawer:
     def __init__(self, placement_matrix):
         self.placement_matrix = placement_matrix
 
-        self.player = PolyphonicPlayer(base_freq=10)
-        self.player.start()
         self.G = nx.Graph()
         self.dis = pygame.display.set_mode(resolution)
         self.coordinate_center = np.array([resolution[1] * margin, resolution[1] * (1-margin)])
@@ -67,11 +64,6 @@ class Drawer:
         pygame.display.set_caption("Pythagoras")
         self.font = pygame.font.SysFont('arial', int(text_size))
     
-    def quit(self):
-        self.player.kill()
-        self.player.join()
-        pygame.quit()
-
     def redraw_circle(self, dis, circle_size, n):
         if self.G.nodes[n]["active"]:
             color = yellow
@@ -86,7 +78,6 @@ class Drawer:
 
     def activate_node(self, n, volume=1):
         self.G.nodes[n]['active'] = True
-        self.player.add_note(n, volume)
         # paint edges
         for neighbor in self.G[n]:
             edge = self.G[n][neighbor]
@@ -100,7 +91,6 @@ class Drawer:
 
     def deactivate_node(self, n):
         self.G.nodes[n]['active'] = False
-        self.player.remove_note(n)
         # paint edges
         for neighbor in self.G[n]:
             edge = self.G[n][neighbor]
@@ -149,18 +139,16 @@ class Drawer:
     def is_active(self, node):
         return self.G.nodes[node]["active"]
 
-    def restart(self):
+    def clear_all(self):
         for node in self.G.nodes:
             if self.G.nodes[node]['active']:
                 self.deactivate_node(node)
-        # TODO zero out vioces_num
     
-    def set_chord(self, chord):
+    def draw_chord(self, chord):
         # deactivate
         for node in self.G.nodes:
             if self.G.nodes[node]['active']:
                 self.deactivate_node(node)
         # activate
-        for freq, volume in chord:
+        for freq, volume, _ in chord:
             self.activate_node(freq, volume)
-        pygame.display.update()
