@@ -18,10 +18,10 @@ pip3 install -r requirements.txt
 ## Running
 
 ```sh
-python3 pythagoras/dashboard.py
+python3 pythagoras/pythagoras.py
 ```
 
 For help, run:
 ```sh
-python3 pythagoras/dashboard.py -h
+python3 pythagoras/pythagoras.py -h
 ```
