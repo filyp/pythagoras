@@ -19,6 +19,8 @@ to load a chord just pressed the key you used for saving
 scroll on a node to change it's volume
 
 left/right arrows undo/redo chord changes
+
+pressing b toggles binding view
 """
 
 
@@ -54,16 +56,17 @@ original_saved_chords = saved_chords.copy()
 print()
 
 drawer = Drawer(placement_matrix)
+drawer.create_graph()
 drawer.draw_graph()
+undo_handler = UndoHandler()
 player = PolyphonicPlayer(base_freq=10)
 player.start()
-pygame.display.update()
-undo_handler = UndoHandler()
 
 notes_to_change_from = []
 notes_to_change_to = []
 game_over = False
 await_key_to_save_chord = False
+binding_view = False
 while not game_over:
     pygame.time.wait(20)
     for event in pygame.event.get():
@@ -77,21 +80,26 @@ while not game_over:
             elif event.key == pygame.K_0:
                 drawer.clear_all()
                 player.turn_off_all()
-                pygame.display.update()
             # ! arrows undo chord switches
             elif event.key == pygame.K_LEFT:
                 chord = undo_handler.undo(player.get_chord())
                 if chord is not None:
                     player.set_chord(chord)
                     drawer.draw_chord(chord)
-                    pygame.display.update()
             # ! redo
             elif event.key == pygame.K_RIGHT:
                 chord = undo_handler.redo(player.get_chord())
                 if chord is not None:
                     player.set_chord(chord)
                     drawer.draw_chord(chord)
-                    pygame.display.update()
+            # ! b toggles binding view
+            elif event.key == pygame.K_b:
+                if binding_view:
+                    binding_view = False
+                    drawer.draw_graph()
+                else:
+                    binding_view = True
+                    drawer.draw_binding_view(player.get_chord())
             # ! space saves chord
             elif event.key == pygame.K_SPACE:
                 await_key_to_save_chord = True
@@ -107,7 +115,6 @@ while not game_over:
                         chord = saved_chords[keyname]
                         player.set_chord(chord)
                         drawer.draw_chord(chord)
-                        pygame.display.update()
 
         # ! detect clicks
         if event.type == pygame.MOUSEBUTTONDOWN:

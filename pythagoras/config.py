@@ -18,20 +18,21 @@ n_limit = 325
 displacement = resolution[0] * 0.1
 circle_size = resolution[0] * 0.009
 line_width = int(resolution[0] * 0.002)
+dot_size = line_width * 3
 text_size = circle_size * 0.9
-margin = 0.1  # of height
+margin = resolution[1] * 0.1
 
 primes = [2, 3, 5]
 draw_lines_for_ratios = [  # ratio, inactive_color, active_color
-    (2 / 1, yellow_dim, yellow),
-    # (3 / 1, yellow_dim, yellow),
-    (3 / 2, yellow_dim, yellow),
-    (4 / 3, yellow_dim, yellow),
-    (5 / 3, green_dim, green),
-    (5 / 4, green_dim, green),
-    (6 / 5, green_dim, green),
-    (7 / 5, blue_dim, blue),
-    (7 / 6, blue_dim, blue),
+    (2, 1, yellow_dim, yellow),
+    # (3, 1, yellow_dim, yellow),
+    (3, 2, yellow_dim, yellow),
+    (4, 3, yellow_dim, yellow),
+    (5, 3, green_dim, green),
+    (5, 4, green_dim, green),
+    (6, 5, green_dim, green),
+    (7, 5, blue_dim, blue),
+    (7, 6, blue_dim, blue),
 ]
 avoid_numbers = set([243])
 for i in range(10):
