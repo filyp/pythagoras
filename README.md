@@ -1,6 +1,9 @@
 # Pythagoras
 harmony = relations between numbers
 
+![aulos](aulos.ico)
+
+
 ## Installation
 
 ```sh
@@ -13,4 +16,9 @@ pip3 install -r requirements.txt
 
 ```sh
 python3 pythagoras/dashboard.py
+```
+
+For help, run:
+```sh
+python3 pythagoras/dashboard.py -h
 ```

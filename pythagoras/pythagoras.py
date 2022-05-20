@@ -7,11 +7,13 @@ from dashboard_helpers import *
 
 help_message = """
 
-click nodes to toggle
-click with right button to stash this node, and then click on some other with left to change old ones to new
+click nodes to turn them on/off
+
+click with the right button on an active node to stash it, and then click on some other inactive node with the left button to change old node to new one
+you can do this to multiple nodes at once, for example click 3 nodes with right and then 3 nodes with left
 
 press ESC to quit
-press 0 to reset notes
+press 0 to turn everything off
 
 to save the chord, press SPACE and then some key
 to load a chord just pressed the key you used for saving
@@ -25,7 +27,11 @@ pressing b toggles binding view
 
 
 # ! load command line arguments
-parser = argparse.ArgumentParser(description="Pythagoras", epilog=help_message)
+parser = argparse.ArgumentParser(
+    description="Pythagoras",
+    epilog=help_message,
+    formatter_class=argparse.RawDescriptionHelpFormatter,
+)
 parser.add_argument(
     "-p",
     "--placement",
@@ -40,9 +46,16 @@ parser.add_argument(
     default=None,
     help="load some set of chords - specify the name of the save in saved_chords.txt file",
 )
+parser.add_argument(
+    "-f",
+    "--base-freq",
+    type=int,
+    default=10,
+    help="all numbers will be multiplied by this number to get frequencies in Hz",
+)
 args = parser.parse_args()
 placement_matrix = placement_matrices[args.placement]
-placement_matrix = placement_matrix[:, :len(primes)]
+placement_matrix = placement_matrix[:, : len(primes)]
 
 chords_saver = ChordsSaver()
 if args.save_name is not None:
@@ -59,7 +72,7 @@ drawer = Drawer(placement_matrix)
 drawer.create_graph()
 drawer.draw_graph()
 undo_handler = UndoHandler()
-player = PolyphonicPlayer(base_freq=10)
+player = PolyphonicPlayer(base_freq=args.base_freq)
 player.start()
 
 notes_to_change_from = []

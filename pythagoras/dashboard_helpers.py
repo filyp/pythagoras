@@ -9,7 +9,6 @@ import networkx as nx
 import randomname
 
 from config import *
-from polyphonic_player import PolyphonicPlayer
 
 
 def decompose_into_small_primes(n, primes=[2, 3, 5, 7]):
@@ -52,20 +51,19 @@ class ChordsSaver:
 
         # * note that save is a dict so it is passes by reference and will be modified
         return save
-    
+
     def save_all_saves(self):
         with open(self.saved_chords_file, "w") as f:
             for save_name, save in self.all_saves.items():
                 if save:
                     f.write(json.dumps({save_name: save}) + "\n")
         print("\nchords saved")
-    
+
     def create_new_save(self):
         save_name = randomname.get_name()
         self.all_saves[save_name] = dict()
         self.last_loaded_save_name = save_name
         return self.all_saves[save_name]
-
 
 
 class Drawer:
@@ -119,7 +117,7 @@ class Drawer:
                 pygame.draw.line(self.dis, edge["color0"], position1, position2, line_width)
                 self.redraw_circle(self.dis, circle_size, neighbor)
         self.redraw_circle(self.dis, circle_size, n)
-    
+
     def create_graph(self):
         # ! create circles
         for n in range(1, n_limit + 1):
@@ -182,10 +180,10 @@ class Drawer:
         for freq, volume, _ in chord:
             self.activate_node(freq, volume)
         pygame.display.update()
-    
+
     def draw_binding_view(self, chord, slope=1):
         def get_dot_position(freq, base_freq):
-            pos = np.array([np.log2(freq), -(np.log2(freq) - np.log2(base_freq)) * slope]) 
+            pos = np.array([np.log2(freq), -(np.log2(freq) - np.log2(base_freq)) * slope])
             return pos * displacement + self.coordinate_center
 
         # clear the screen
@@ -202,8 +200,9 @@ class Drawer:
             dot_size = line_width + np.sqrt(volume) * 1 * line_width
             note_position = get_dot_position(freq, freq)
             pygame.draw.circle(self.dis, white, note_position, dot_size)
-        
+
         # create gestalts
+        # fmt: off
         ratios = [
             (2,1), (3,1), (4,1), (5,1), (6,1), (7,1), (8,1),
             (3,2), (5,2), (7,2), 
@@ -213,10 +212,17 @@ class Drawer:
             (7,6), 
             (8,7),
         ]
-        gestalt = defaultdict(set) # for a base note, list te harmonics connected to it
-        gestalt_affiliation = defaultdict(set) # for a note, list the base notes of gestalts that it is in
+        # fmt: on
+        gestalt = defaultdict(set)  # for a base note, list te harmonics connected to it
+        gestalt_affiliation = defaultdict(
+            set
+        )  # for a note, list the base notes of gestalts that it is in
         for a, b in ratios:
-            for freq1, vol1, _, in chord:
+            for (
+                freq1,
+                vol1,
+                _,
+            ) in chord:
                 for freq2, vol2, _ in chord:
                     if freq2 / freq1 != a / b:
                         continue
@@ -225,7 +231,7 @@ class Drawer:
                     gestalt[base_note].add(freq1)
                     gestalt_affiliation[freq1].add(base_note)
                     gestalt_affiliation[freq2].add(base_note)
-        
+
         # draw gestalts
         volume_dict = {freq: vol for freq, vol, _ in chord}
         for base_note, freqs in gestalt.items():
@@ -238,7 +244,7 @@ class Drawer:
                 position = get_dot_position(freq, base_note)
                 dot_size = line_width + np.sqrt(volume_dict[freq]) * 1 * line_width
                 pygame.draw.circle(self.dis, white, position, dot_size)
-        
+
         # draw gestalt binding
         for freq, base_notes in gestalt_affiliation.items():
             min_base_note = min(base_notes)
@@ -247,22 +253,19 @@ class Drawer:
             max_pos = get_dot_position(freq, max_base_note)
             pygame.draw.line(self.dis, white, min_pos, max_pos, line_width)
 
-
-
         pygame.display.update()
-
 
 
 class UndoHandler:
     def __init__(self):
         self.history = []
         self.redo_stack = []
-    
+
     def save(self, item):
         self.history.append(item)
         # # saving clears redo stack
         # self.redo_stack = []
-    
+
     def undo(self, current_state):
         self.redo_stack.append(current_state)
 
@@ -272,7 +275,7 @@ class UndoHandler:
                 continue
             return item
         return None
-    
+
     def redo(self, current_state):
         self.history.append(current_state)
 
@@ -282,4 +285,3 @@ class UndoHandler:
                 continue
             return item
         return None
-        
