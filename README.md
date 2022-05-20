@@ -3,8 +3,6 @@ harmony = relations between numbers
 
 ![aulos](aulos.png)
 
-<br>
-
 ## Installation
 
 ```sh
