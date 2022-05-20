@@ -4,7 +4,7 @@ import pygame
 from config import *
 from dashboard_helpers import *
 
-from pythagoras.polyphonic_player import PolyphonicPlayer
+from polyphonic_player import PolyphonicPlayer
 
 
 help_message = """
