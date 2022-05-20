@@ -1,9 +1,11 @@
 import os
+import json
 import pathlib
 
 import pygame
 import numpy as np
 import networkx as nx
+import randomname
 
 from config import *
 from polyphonic_player import PolyphonicPlayer
@@ -24,31 +26,44 @@ def decompose_into_small_primes(n, primes=[2, 3, 5, 7]):
     return factors
 
 
-def load_chords(line_number):
-    base_dir = pathlib.Path(__file__).parent.parent
-    saved_chords_file = os.path.join(base_dir, "data", "saved_chords.txt")
-    with open(saved_chords_file, "r") as f:
-        saved_chords = f.readlines()
-    all_saved_chords = [x.strip() for x in saved_chords]
-    try:
-        loaded_chords = all_saved_chords[line_number]
-    except IndexError:
-        print("Error: there is no saved chord with this line number")
-        exit(1)
-    # load a dict from a string
-    saved_chords = eval(loaded_chords)
-    print("\nloaded chords:")
-    for keyname, chord in saved_chords.items():
-        print(f"{keyname}: {[freq for freq, _, _ in chord]}")
-    return saved_chords
+class ChordsSaver:
+    def __init__(self):
+        base_dir = pathlib.Path(__file__).parent.parent
+        self.saved_chords_file = os.path.join(base_dir, "data", "saved_chords.txt")
+        self.all_saves = dict()
+        if os.path.isfile(self.saved_chords_file):
+            with open(self.saved_chords_file, "r") as f:
+                for line in f:
+                    save_name, save_dict = json.loads(line).popitem()
+                    self.all_saves[save_name] = save_dict
 
+    def get_save(self, save_name):
+        try:
+            save = self.all_saves[save_name]
+        except KeyError:
+            print("Error: there is no save with this name")
+            exit(1)
 
-def save_chords(saved_chords):
-    base_dir = pathlib.Path(__file__).parent.parent
-    saved_chords_file = os.path.join(base_dir, "data", "saved_chords.txt")
-    with open(saved_chords_file, "a") as f:
-        f.write("\n" + str(saved_chords))
-    print("\nchords saved")
+        print("\nloaded chords:")
+        for keyname, chord in save.items():
+            print(f"{keyname}: {[freq for freq, _, _ in chord]}")
+        self.last_loaded_save_name = save_name
+
+        # * note that save is a dict so it is passes by reference and will be modified
+        return save
+    
+    def save_all_saves(self):
+        with open(self.saved_chords_file, "w") as f:
+            for save_name, save in self.all_saves.items():
+                f.write(json.dumps({save_name: save}) + "\n")
+        print("\nchords saved")
+    
+    def create_new_save(self):
+        save_name = randomname.get_name()
+        self.all_saves[save_name] = dict()
+        self.last_loaded_save_name = save_name
+        return self.all_saves[save_name]
+
 
 
 class Drawer:
@@ -154,3 +169,36 @@ class Drawer:
         # activate
         for freq, volume, _ in chord:
             self.activate_node(freq, volume)
+
+
+class UndoHandler:
+    def __init__(self):
+        self.history = []
+        self.redo_stack = []
+    
+    def save(self, item):
+        self.history.append(item)
+        # # saving clears redo stack
+        # self.redo_stack = []
+    
+    def undo(self, current_state):
+        self.redo_stack.append(current_state)
+
+        while self.history:
+            item = self.history.pop()
+            if item == current_state:
+                continue
+            return item
+        return None
+    
+    def redo(self, current_state):
+        self.history.append(current_state)
+
+        while self.redo_stack:
+            item = self.redo_stack.pop()
+            if item == current_state:
+                continue
+            return item
+        return None
+        
+

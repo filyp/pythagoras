@@ -1,7 +1,5 @@
 import argparse
 import pygame
-import numpy as np
-import networkx as nx
 
 from config import *
 from dashboard_helpers import *
@@ -19,6 +17,8 @@ to save the chord, press SPACE and then some key
 to load a chord just pressed the key you used for saving
 
 scroll on a node to change it's volume
+
+left/right arrows undo/redo chord changes
 """
 
 
@@ -32,21 +32,24 @@ parser.add_argument(
     help=f"possible values: {list(placement_matrices.keys())}",
 )
 parser.add_argument(
-    "-l",
-    "--load_chords",
-    type=int,
+    "-s",
+    "--save-name",
+    type=str,
     default=None,
-    help="load some set of chords - specify the line number in saved_chords.txt file",
+    help="load some set of chords - specify the name of the save in saved_chords.txt file",
 )
 args = parser.parse_args()
 placement_matrix = placement_matrices[args.placement]
 placement_matrix = placement_matrix[:, :len(primes)]
 
-if args.load_chords is not None:
+chords_saver = ChordsSaver()
+if args.save_name is not None:
     # ! load the saved chords
-    saved_chords = load_chords(args.load_chords)
+    saved_chords = chords_saver.get_save(args.save_name)
 else:
-    saved_chords = dict()
+    saved_chords = chords_saver.create_new_save()
+
+
 original_saved_chords = saved_chords.copy()
 print()
 
@@ -55,6 +58,7 @@ drawer.draw_graph()
 player = PolyphonicPlayer(base_freq=10)
 player.start()
 pygame.display.update()
+undo_handler = UndoHandler()
 
 notes_to_change_from = []
 notes_to_change_to = []
@@ -63,7 +67,6 @@ await_key_to_save_chord = False
 while not game_over:
     pygame.time.wait(20)
     for event in pygame.event.get():
-        # print(event)
         # check exit
         if event.type == pygame.QUIT:
             game_over = True
@@ -75,6 +78,20 @@ while not game_over:
                 drawer.clear_all()
                 player.turn_off_all()
                 pygame.display.update()
+            # ! arrows undo chord switches
+            elif event.key == pygame.K_LEFT:
+                chord = undo_handler.undo(player.get_chord())
+                if chord is not None:
+                    player.set_chord(chord)
+                    drawer.draw_chord(chord)
+                    pygame.display.update()
+            # ! redo
+            elif event.key == pygame.K_RIGHT:
+                chord = undo_handler.redo(player.get_chord())
+                if chord is not None:
+                    player.set_chord(chord)
+                    drawer.draw_chord(chord)
+                    pygame.display.update()
             # ! space saves chord
             elif event.key == pygame.K_SPACE:
                 await_key_to_save_chord = True
@@ -85,7 +102,7 @@ while not game_over:
                     print(f"saved chord {keyname}: {saved_chords[keyname]}")
                     await_key_to_save_chord = False
                 else:
-                    # load chord
+                    # ! load chord
                     if keyname in saved_chords:
                         chord = saved_chords[keyname]
                         player.set_chord(chord)
@@ -118,6 +135,7 @@ while not game_over:
                     if len(notes_to_change_from) == len(notes_to_change_to):
                         # ! switch all
                         for freq1, freq2 in zip(notes_to_change_from, notes_to_change_to):
+                            undo_handler.save(player.get_chord())
                             drawer.deactivate_node(freq1)
                             drawer.activate_node(freq2)
                             player.move_note(freq1, new_freq=freq2)
@@ -137,7 +155,5 @@ while not game_over:
 player.kill()
 player.join()
 pygame.quit()
-
-if original_saved_chords != saved_chords:
-    # save the chords to a file
-    save_chords(saved_chords)
+chords_saver.save_all_saves()
+print(f"save name: {chords_saver.last_loaded_save_name}")
