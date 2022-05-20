@@ -23,11 +23,24 @@ scroll on a node to change it's volume
 
 
 # ! load command line arguments
-parser = argparse.ArgumentParser(description='Pythagoras', epilog=help_message)
-parser.add_argument('-p', '--placement', type=str, default='logarithmic', help=f'possible values: {list(placement_matrices.keys())}')
-parser.add_argument('-l', '--load_chords', type=int, default=None, help='load some set of chords - specify the line number in saved_chords.txt file')
+parser = argparse.ArgumentParser(description="Pythagoras", epilog=help_message)
+parser.add_argument(
+    "-p",
+    "--placement",
+    type=str,
+    default="logarithmic",
+    help=f"possible values: {list(placement_matrices.keys())}",
+)
+parser.add_argument(
+    "-l",
+    "--load_chords",
+    type=int,
+    default=None,
+    help="load some set of chords - specify the line number in saved_chords.txt file",
+)
 args = parser.parse_args()
 placement_matrix = placement_matrices[args.placement]
+placement_matrix = placement_matrix[:, :len(primes)]
 
 if args.load_chords is not None:
     # ! load the saved chords
@@ -117,7 +130,7 @@ while not game_over:
             elif event.button == 4:
                 player.move_note(clicked_node, volume_change=1.1)
             elif event.button == 5:
-                player.move_note(clicked_node, volume_change=1/1.1)
+                player.move_note(clicked_node, volume_change=1 / 1.1)
 
             pygame.display.update()
 

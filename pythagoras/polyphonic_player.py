@@ -1,5 +1,6 @@
+import time
 import threading
-from time import sleep, time
+import dataclasses
 
 import numpy as np
 import sounddevice
@@ -7,136 +8,152 @@ import sounddevice
 
 BIT_RATE = 48000
 
-sine_amps = [0.0, 1.0]
-violin_amps = [0.0, 1.0, 0.286699025, 0.150079537, 0.042909002,]
-            #    0.203797365, 0.229228698, 0.156931925,
-            #    0.115470898, 0.0, 0.097401803, 0.087653465,]
-piano_amps = [0.0, 1.0, 0.399064778, 0.229404484, 0.151836061,]
-              # 0.196754229, 0.093742264, 0.060871957,]
-              # 0.138605419, 0.010535002, 0.071021868,]
+
+@dataclasses.dataclass
+class Note:
+    freq: float
+    volume: float
+    phase: float
+    voice_num: int
 
 
 class PolyphonicPlayer(threading.Thread):
-    segment_duration = 0.010     # in seconds
+    segment_duration = 0.010  # in seconds
 
-    def __init__(self, base_freq=10, amps=sine_amps, max_voices=20):
+    def __init__(self, base_freq=10, master_volume=0.05):
         threading.Thread.__init__(self)
 
-        self.stream = sounddevice.RawOutputStream(
-            channels=1,
-            samplerate=BIT_RATE)
+        self.stream = sounddevice.RawOutputStream(channels=1, samplerate=BIT_RATE)
         self.stream.start()
 
         self.alive = True
         self.base_freq = base_freq
-        self.last_time = time()
-        self.amps = amps / np.sum(amps)
-        self.max_voices = max_voices
-        self.notes = dict()   # voice_num: [freq, amplitude, phase]
-        self.next_voice_num = 0
-        self.notes_to_add = []
-        self.notes_to_delete = []
+        self.master_volume = master_volume  # lower the volume to avoid clipping
+        self.notes = list()
+        self.notes_to_add = list()
+        self.notes_to_delete = list()
+        self.notes_to_move = list()
+        self.chord_to_set = None
+        self._warned_about_clipping = False
 
     def run(self):
         while self.alive:
+            # * self.notes should only be modified in this loop
             # ! add and delete queued notes
-            for voice_num, note in self.notes_to_add:
-                self.notes[voice_num] = note
-            for voice_num in self.notes_to_delete:
-                del self.notes[voice_num]
-            self.notes_to_add = []
-            self.notes_to_delete = []
+            while self.notes_to_add:
+                note = self.notes_to_add.pop()
+                self.notes.append(note)
+            while self.notes_to_delete:
+                note = self.notes_to_delete.pop()
+                if note in self.notes:
+                    self.notes.remove(note)
+            # ! set a chord
+            if self.chord_to_set is not None:
+                existing_voice_nums = set(note.voice_num for note in self.notes)
+                new_voice_nums = set(self.chord_to_set.keys())
+                voice_nums_to_add = new_voice_nums - existing_voice_nums
+                voice_nums_to_delete = existing_voice_nums - new_voice_nums
+                voice_nums_to_change = new_voice_nums & existing_voice_nums
+                for voice_num in voice_nums_to_add:
+                    self.notes.append(self.chord_to_set[voice_num])
+                for voice_num in voice_nums_to_delete:
+                    self.notes.remove(self._get_note_by_voice_num(voice_num))
+                for voice_num in voice_nums_to_change:
+                    note = self._get_note_by_voice_num(voice_num)
+                    note.freq = self.chord_to_set[voice_num].freq
+                    note.volume = self.chord_to_set[voice_num].volume
+                self.chord_to_set = None
+            # ! move notes
+            while self.notes_to_move:
+                old_freq, new_freq, volume_change = self.notes_to_move.pop()
+                for note in self.notes:
+                    if note.freq == old_freq:
+                        # change this note
+                        if new_freq is not None:
+                            note.freq = new_freq
+                        if volume_change is not None:
+                            note.volume *= volume_change
+                        break
 
             if len(self.notes) == 0:
                 # no frequencies given so be silent
-                sleep(self.segment_duration)
+                time.sleep(self.segment_duration)
                 continue
-            if  self.max_voices < len(self.notes):
-                self.max_voices = len(self.notes)
 
-            # construct a sound
-            new_time = time()
+            # ! construct a sound
             final_sound = 0
-            
-            for note in self.notes.values():
-                ratio, amplitude, phase = note
-                frequency = ratio * self.base_freq
-                final_sound += self.get_wave(frequency, phase) * amplitude
+            for note in self.notes:
+                final_frequency = note.freq * self.base_freq
+                final_sound += self.get_wave(final_frequency, note.phase) * note.volume
                 # update phase
-                note[2] = (phase + self.segment_duration * frequency * 2*np.pi) % (2*np.pi)
+                phase_change = self.segment_duration * final_frequency * 2 * np.pi
+                note.phase = (note.phase + phase_change) % (2 * np.pi)
 
-            final_sound /= self.max_voices    # adjust volume
+            final_sound *= self.master_volume
+            if np.max(np.abs(final_sound)) > 1 and not self._warned_about_clipping:
+                print("WARNING: sound is clipping - lower the volume")
+                # warn only once
+                self._warned_about_clipping = True
+            # clip the sound to -1..1
+            final_sound = np.clip(final_sound, -1, 1)
 
-            self.last_time = new_time
-            self.stream.write(final_sound
-                              .astype(np.float32)
-                              .tobytes())
+            self.stream.write(final_sound.astype(np.float32).tobytes())
 
         self.stream.stop()
         self.stream.close()
 
-    def get_wave(self, primary_frequency, phase):
-        acc = 0
-        for index, amplitude in enumerate(self.amps):
-            frequency = primary_frequency * index
-            wave = np.sin(2 * np.pi *
-                          np.arange(BIT_RATE * self.segment_duration) *
-                          frequency / BIT_RATE
-                          + phase * index)
-            acc += wave * amplitude
+    def get_wave(self, frequency, phase):
+        ts = np.arange(BIT_RATE * self.segment_duration) / BIT_RATE
+        wave = np.sin(2 * np.pi * frequency * ts + phase)
+
         # adjust volume
-        human_amp = self.human_corrected_amplitude(primary_frequency)
+        human_amp = self.human_corrected_amplitude(frequency)
         # human_amp = 1
-        return acc * human_amp
-    
+        return wave * human_amp
+
     def human_corrected_amplitude(self, frequency):
         low_limit = 300
         slope = -1.0
         rescaled = max(frequency / low_limit, 1)
-        return rescaled ** slope
+        return rescaled**slope
 
     def kill(self):
         self.alive = False
-    
+
     def add_note(self, freq, volume=1, phase=0):
-        self.notes_to_add.append((self.next_voice_num, [freq, volume, phase]))
-        self.next_voice_num += 1
-    
-    def remove_note(self, freq):
-        for voice_num, note in self.notes.items():
-            if note[0] == freq:
-                self.notes_to_delete.append(voice_num)
+        # randomly choose a new voice_num that is not in use
+        voice_nums = [note.voice_num for note in self.notes.copy()]
+        while True:
+            voice_num = np.random.randint(2**32)
+            if voice_num not in voice_nums:
                 break
-    
+        note = Note(freq, volume, phase, voice_num)
+        self.notes_to_add.append(note)
+
+    def remove_note(self, freq_to_delete):
+        for note in self.notes.copy():
+            if note.freq == freq_to_delete:
+                self.notes_to_delete.append(note)
+                break
+
     def get_chord(self):
-        return [[freq, volume, voice_num] for voice_num, [freq, volume, phase] in self.notes.items()
-                if freq != 0]
-    
+        return [(note.freq, note.volume, note.voice_num) for note in self.notes.copy()]
+
     def turn_off_all(self):
-        self.notes = dict()
-        # self.next_voice_num = 0
-    
+        for note in self.notes.copy():
+            self.notes_to_delete.append(note)
+
     def set_chord(self, chord):
+        formatted_chord = dict()
         for freq, volume, voice_num in chord:
-            if voice_num in self.notes:
-                # ! update existing note
-                self.notes[voice_num][0] = freq
-                self.notes[voice_num][1] = volume
-            else:
-                # ! add new note
-                self.add_note(freq, volume)
-        # ! remove notes that are not in the chord
-        new_voice_nums = [voice_num for freq, volume, voice_num in chord]
-        for voice_num, [freq, _, _] in self.notes.items():
-            if voice_num not in new_voice_nums:
-                self.remove_note(freq)
-    
+            formatted_chord[voice_num] = Note(freq, volume, 0, voice_num)
+        self.chord_to_set = formatted_chord
+
     def move_note(self, old_freq, new_freq=None, volume_change=None):
-        # ! assumes that the voice_num exists
-        for freq, _, voice_num in self.get_chord():
-            if freq == old_freq:
-                if new_freq is not None:
-                    self.notes[voice_num][0] = new_freq
-                if volume_change is not None:
-                    self.notes[voice_num][1] *= volume_change
-                break
+        self.notes_to_move.append((old_freq, new_freq, volume_change))
+
+    def _get_note_by_voice_num(self, voice_num):
+        for note in self.notes.copy():
+            if note.voice_num == voice_num:
+                return note
+        return None

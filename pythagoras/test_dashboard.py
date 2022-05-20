@@ -1,6 +1,7 @@
 # tests for the dashboard
 from dashboard_helpers import *
 
+
 def test_decomposition_into_primes():
     primes = [2, 3, 5, 7]
     assert list(decompose_into_small_primes(1, primes)) == [0, 0, 0, 0]
