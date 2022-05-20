@@ -1,8 +1,9 @@
 # Pythagoras
 harmony = relations between numbers
 
-![aulos](aulos.ico)
+![aulos](aulos.png)
 
+<br>
 
 ## Installation
 
