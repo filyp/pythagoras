@@ -1,7 +1,12 @@
 # Pythagoras
-harmony = relations between numbers
 
 ![aulos](aulos.png)
+
+Explore strange new harmonies, boldly go where no one has gone before!
+
+**harmony = relations between numbers**
+
+
 ## Installation
 
 ```sh
