@@ -46,7 +46,13 @@ class ChordsSaver:
 
         print("\nloaded chords:")
         for keyname, chord in save.items():
+            if keyname == "history":
+                history = chord
+                continue
             print(f"{keyname}: {[freq for freq, _, _ in chord]}")
+        print("\nhistory:")
+        for chord in history:
+            print(f"{[freq for freq, _, _ in chord]}")
         self.last_loaded_save_name = save_name
 
         # * note that save is a dict so it is passes by reference and will be modified
@@ -257,8 +263,8 @@ class Drawer:
 
 
 class UndoHandler:
-    def __init__(self):
-        self.history = []
+    def __init__(self, history=[]):
+        self.history = history
         self.redo_stack = []
 
     def save(self, item):
@@ -285,3 +291,6 @@ class UndoHandler:
                 continue
             return item
         return None
+    
+    def get_whole_histroy(self, current_state):
+        return self.history + [current_state] + list(reversed(self.redo_stack))

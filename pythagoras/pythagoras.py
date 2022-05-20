@@ -63,8 +63,10 @@ chords_saver = ChordsSaver()
 if args.save_name is not None:
     # ! load the saved chords
     saved_chords = chords_saver.get_save(args.save_name)
+    undo_handler = UndoHandler(saved_chords["history"])
 else:
     saved_chords = chords_saver.create_new_save()
+    undo_handler = UndoHandler()
 
 
 original_saved_chords = saved_chords.copy()
@@ -73,7 +75,6 @@ print()
 drawer = Drawer(placement_matrix)
 drawer.create_graph()
 drawer.draw_graph()
-undo_handler = UndoHandler()
 player = PolyphonicPlayer(base_freq=args.base_freq)
 player.start()
 
@@ -177,5 +178,6 @@ while not game_over:
 player.kill()
 player.join()
 pygame.quit()
+saved_chords["history"] = undo_handler.get_whole_histroy(player.get_chord())
 chords_saver.save_all_saves()
 print(f"save name: {chords_saver.last_loaded_save_name}")
