@@ -66,7 +66,12 @@ class ChordsSaver:
         print("\nchords saved")
 
     def create_new_save(self):
-        save_name = randomname.get_name()
+        all_save_names = list(self.all_saves.keys())
+        # make sure the name is unique
+        while True:
+            save_name = randomname.get_name()
+            if save_name not in all_save_names:
+                break
         self.all_saves[save_name] = dict()
         self.last_loaded_save_name = save_name
         return self.all_saves[save_name]
