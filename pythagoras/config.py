@@ -31,7 +31,7 @@ draw_lines_for_ratios = [  # ratio, inactive_color, active_color
     (7, 5, blue_dim, blue),
     (7, 6, blue_dim, blue),
 ]
-avoid_numbers = set([243])
+avoid_numbers = set([])
 for i in range(10):
     avoid_numbers.add(i * 125)
     avoid_numbers.add(i * 49)

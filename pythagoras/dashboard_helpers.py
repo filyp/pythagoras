@@ -114,6 +114,9 @@ class Drawer:
         dis.blit(text, text_rect)
 
     def activate_node(self, n, volume=1):
+        if n not in self.G.nodes:
+            print(f"Warning: node {n} not in graph. Consider increasing number-limit.")
+            return
         self.G.nodes[n]["active"] = True
         # paint edges
         for neighbor in self.G[n]:
