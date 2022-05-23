@@ -12,15 +12,12 @@ yellow_dim = (70, 70, 0)
 orange = (255, 165, 0)
 orange_dim = (70, 40, 0)
 
-resolution = (2560, 1440)
-# resolution = (3920, 2160)
-n_limit = 325
-displacement = resolution[0] * 0.1
-circle_size = resolution[0] * 0.009
-line_width = int(resolution[0] * 0.002)
-dot_size = line_width * 3
+# screen width is 1
+displacement = 0.09
+circle_size = 0.009
+line_width = 0.002
 text_size = circle_size * 0.9
-margin = resolution[1] * 0.1
+margin = 0.06
 
 primes = [2, 3, 5]
 draw_lines_for_ratios = [  # ratio, inactive_color, active_color

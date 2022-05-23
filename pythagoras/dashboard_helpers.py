@@ -50,9 +50,10 @@ class ChordsSaver:
                 history = chord
                 continue
             print(f"{keyname}: {[freq for freq, _, _ in chord]}")
-        print("\nhistory:")
-        for chord in history:
-            print(f"{[freq for freq, _, _ in chord]}")
+        if "history" in save:
+            print("\nhistory:")
+            for chord in history:
+                print(f"{[freq for freq, _, _ in chord]}")
         self.last_loaded_save_name = save_name
 
         # * note that save is a dict so it is passes by reference and will be modified
@@ -78,24 +79,34 @@ class ChordsSaver:
 
 
 class Drawer:
-    def __init__(self, placement_matrix):
-        self.placement_matrix = placement_matrix
-
-        self.G = nx.Graph()
-        self.dis = pygame.display.set_mode(resolution)
-        self.coordinate_center = np.array([margin, resolution[1] - margin])
-
+    def __init__(self, placement_matrix, n_limit):
         pygame.display.init()
         pygame.font.init()
-        pygame.display.set_caption("Pythagoras")
-        self.font = pygame.font.SysFont("arial", int(text_size))
 
-    def redraw_circle(self, dis, circle_size, n):
+        self.placement_matrix = placement_matrix
+        self.n_limit = n_limit
+
+        self.G = nx.Graph()
+        _desktop_sizes = pygame.display.get_desktop_sizes()
+        self.resolution = _desktop_sizes[-1]
+        self.dis = pygame.display.set_mode(self.resolution, pygame.FULLSCREEN, display=len(_desktop_sizes)-1)
+        pygame.display.set_caption("Pythagoras")
+
+        scale = self.resolution[0]
+        self.displacement = displacement * scale
+        self.circle_size = circle_size * scale
+        self.line_width = int(line_width * scale)
+        self.margin = margin * scale
+        _text_size = text_size * scale
+        self.font = pygame.font.SysFont("arial", int(_text_size))
+        self.coordinate_center = np.array([self.margin, self.resolution[1] - self.margin])
+
+    def redraw_circle(self, dis, n):
         if self.G.nodes[n]["active"]:
             color = yellow
         else:
             color = white
-        pygame.draw.circle(dis, color, self.G.nodes[n]["position"], circle_size)
+        pygame.draw.circle(dis, color, self.G.nodes[n]["position"], self.circle_size)
         # print a number in the circle
         text = self.font.render(str(n), True, black)
         text_rect = text.get_rect()
@@ -111,9 +122,9 @@ class Drawer:
                 edge["active"] = True
                 position1 = self.G.nodes[n]["position"]
                 position2 = self.G.nodes[neighbor]["position"]
-                pygame.draw.line(self.dis, edge["color1"], position1, position2, line_width)
-                self.redraw_circle(self.dis, circle_size, neighbor)
-        self.redraw_circle(self.dis, circle_size, n)
+                pygame.draw.line(self.dis, edge["color1"], position1, position2, self.line_width)
+                self.redraw_circle(self.dis, neighbor)
+        self.redraw_circle(self.dis, n)
 
     def deactivate_node(self, n):
         self.G.nodes[n]["active"] = False
@@ -125,13 +136,13 @@ class Drawer:
                 edge["active"] = False
                 position1 = self.G.nodes[n]["position"]
                 position2 = self.G.nodes[neighbor]["position"]
-                pygame.draw.line(self.dis, edge["color0"], position1, position2, line_width)
-                self.redraw_circle(self.dis, circle_size, neighbor)
-        self.redraw_circle(self.dis, circle_size, n)
+                pygame.draw.line(self.dis, edge["color0"], position1, position2, self.line_width)
+                self.redraw_circle(self.dis, neighbor)
+        self.redraw_circle(self.dis, n)
 
     def create_graph(self):
         # ! create circles
-        for n in range(1, n_limit + 1):
+        for n in range(1, self.n_limit + 1):
             if n in avoid_numbers:
                 continue
             decomposition = decompose_into_small_primes(n, primes=primes)
@@ -139,7 +150,7 @@ class Drawer:
                 continue
             position = (
                 self.placement_matrix @ decomposition
-            ) * displacement + self.coordinate_center
+            ) * self.displacement + self.coordinate_center
             self.G.add_node(n, active=False, position=position)
         # ! create edges
         for a, b, color0, color1 in draw_lines_for_ratios:
@@ -160,16 +171,16 @@ class Drawer:
                 color = edge_data["color1"]
             else:
                 color = edge_data["color0"]
-            pygame.draw.line(self.dis, color, position1, position2, line_width)
+            pygame.draw.line(self.dis, color, position1, position2, self.line_width)
         # ! draw circles
         for n in self.G.nodes:
-            self.redraw_circle(self.dis, circle_size, n)
+            self.redraw_circle(self.dis, n)
         pygame.display.update()
 
     def get_clicked_node(self, click_pos):
         for n in self.G.nodes:
             position = self.G.nodes[n]["position"]
-            if np.linalg.norm(click_pos - position) < circle_size:
+            if np.linalg.norm(click_pos - position) < self.circle_size:
                 return n
         return None
 
@@ -195,20 +206,20 @@ class Drawer:
     def draw_binding_view(self, chord, slope=1):
         def get_dot_position(freq, base_freq):
             pos = np.array([np.log2(freq), -(np.log2(freq) - np.log2(base_freq)) * slope])
-            return pos * displacement + self.coordinate_center
+            return pos * self.displacement + self.coordinate_center
 
         # clear the screen
         self.dis.fill(black)
 
         # draw a horizontal line
         position1 = self.coordinate_center
-        position2 = self.coordinate_center + (resolution[0] - 2 * margin, 0)
-        pygame.draw.line(self.dis, white, position1, position2, line_width)
+        position2 = np.array([self.resolution[0] - self.margin, self.resolution[1] - self.margin])
+        pygame.draw.line(self.dis, white, position1, position2, self.line_width)
 
         # draw notes on the line
         for freq, volume, _ in chord:
             log_position = np.log2(freq)
-            dot_size = line_width + np.sqrt(volume) * 1 * line_width
+            dot_size = self.line_width + np.sqrt(volume) * 1 * self.line_width
             note_position = get_dot_position(freq, freq)
             pygame.draw.circle(self.dis, white, note_position, dot_size)
 
@@ -250,10 +261,10 @@ class Drawer:
             max_freq = max(freqs)
             min_pos = get_dot_position(min_freq, base_note)
             max_pos = get_dot_position(max_freq, base_note)
-            pygame.draw.line(self.dis, white, min_pos, max_pos, line_width)
+            pygame.draw.line(self.dis, white, min_pos, max_pos, self.line_width)
             for freq in freqs:
                 position = get_dot_position(freq, base_note)
-                dot_size = line_width + np.sqrt(volume_dict[freq]) * 1 * line_width
+                dot_size = self.line_width + np.sqrt(volume_dict[freq]) * 1 * self.line_width
                 pygame.draw.circle(self.dis, white, position, dot_size)
 
         # draw gestalt binding
@@ -262,7 +273,7 @@ class Drawer:
             max_base_note = max(base_notes)
             min_pos = get_dot_position(freq, min_base_note)
             max_pos = get_dot_position(freq, max_base_note)
-            pygame.draw.line(self.dis, white, min_pos, max_pos, line_width)
+            pygame.draw.line(self.dis, white, min_pos, max_pos, self.line_width)
 
         pygame.display.update()
 

@@ -56,6 +56,13 @@ parser.add_argument(
     default=10,
     help="all numbers will be multiplied by this number to get frequencies in Hz",
 )
+parser.add_argument(
+    "-n",
+    "--number-limit",
+    type=int,
+    default=600,
+    help="draw numbers up to this number",
+)
 args = parser.parse_args()
 placement_matrix = placement_matrices[args.placement]
 placement_matrix = placement_matrix[:, : len(primes)]
@@ -69,7 +76,7 @@ else:
 undo_handler = UndoHandler(saved_chords.get("history", []))
 print()
 
-drawer = Drawer(placement_matrix)
+drawer = Drawer(placement_matrix, args.number_limit)
 drawer.create_graph()
 drawer.draw_graph()
 player = PolyphonicPlayer(base_freq=args.base_freq)
